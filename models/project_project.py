@@ -9,36 +9,40 @@ class ProjectProject(models.Model):
 
     def copy_project_with_stages(self, default=None):
         """
-        Método personalizado para duplicar proyecto con etapas correctamente
+        Método personalizado para duplicar proyecto SOLO con las etapas,
+        manteniendo las tareas originales sin duplicar
         """
         if default is None:
             default = {}
 
-        # Mapeo de etapas y tareas originales
-        old_stages_map = {stage.id: stage.name for stage in self.type_ids}
-        old_tasks_stage_map = {task.id: task.stage_id.id for task in self.task_ids}
-
-        # 1. Duplicar el proyecto usando el método estándar
+        # Mapeo de etapas originales por nombre
+        old_stages_by_name = {stage.name: stage for stage in self.type_ids}
+        
+        # 1. Duplicar el proyecto con las tareas originales (sin prefijo "copia")
         new_project = super(ProjectProject, self).copy(default)
 
-        # 2. Duplicar las etapas manualmente y crear mapeo
+        # 2. Limpiar las etapas duplicadas automáticamente
+        new_project.type_ids.unlink()
+
+        # 3. Recrear SOLO las etapas del proyecto base (sin tareas)
         new_stages_map = {}
         for stage in self.type_ids:
-            new_stage = stage.copy({'project_ids': [(6, 0, [new_project.id])]})
-            new_stages_map[stage.id] = new_stage
+            new_stage = stage.copy({
+                'project_ids': [(6, 0, [new_project.id])],
+                'task_ids': [(5, 0, 0)]  # No copiar tareas en las etapas
+            })
+            new_stages_map[stage.name] = new_stage
 
-        # 3. Reasignar las tareas a las nuevas etapas
+        # 4. Reasignar las tareas del nuevo proyecto a las etapas correctas
         for task in new_project.task_ids:
             # Buscar la tarea original correspondiente
             original_task_name = task.name.replace('(copia) ', '')
             original_task = self.task_ids.filtered(lambda t: t.name == original_task_name)
-            if not original_task:
-                original_task = self.task_ids.filtered(lambda t: t.name == task.name)
-
-            if original_task:
-                original_stage_id = old_tasks_stage_map.get(original_task[0].id)
-                if original_stage_id and original_stage_id in new_stages_map:
-                    task.stage_id = new_stages_map[original_stage_id].id
+            
+            if original_task and original_task.stage_id:
+                stage_name = original_task.stage_id.name
+                if stage_name in new_stages_map:
+                    task.stage_id = new_stages_map[stage_name].id
 
         return new_project
 
