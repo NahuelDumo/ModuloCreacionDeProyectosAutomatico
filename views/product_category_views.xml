@@ -41,17 +41,5 @@
         </field>
     </record>
 
-    <!-- Vista de lista extendida para categorías de producto -->
-    <record id="view_product_category_tree_inherit" model="ir.ui.view">
-        <field name="name">product.category.tree.inherit</field>
-        <field name="model">product.category</field>
-        <field name="inherit_id" ref="product.product_category_list_view"/>
-        <field name="arch" type="xml">
-            <xpath expr="//field[@name='name']" position="after">
-                <field name="auto_create_project"/>
-                <field name="project_template_count"/>
-            </xpath>
-        </field>
-    </record>
 
 </odoo>
