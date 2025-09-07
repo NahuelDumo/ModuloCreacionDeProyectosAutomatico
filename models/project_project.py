@@ -7,6 +7,47 @@ _logger = logging.getLogger(__name__)
 class ProjectProject(models.Model):
     _inherit = 'project.project'
 
+    @api.returns('self', lambda value: value.id)
+    def copy(self, default=None):
+        """
+        Sobrescribes el método copy para duplicar las etapas (project.task.type)
+        y reasignar las tareas a las etapas correctas.
+        """
+        if default is None:
+            default = {}
+
+        # Forzar la duplicación de tareas si no está ya establecido
+        if 'task_ids' not in default:
+            default['task_ids'] = [(0, 0, task.copy_data()[0]) for task in self.task_ids]
+
+        # Mapeo de etapas antiguas a nombres para la búsqueda posterior
+        old_stages_map = {stage.id: stage.name for stage in self.type_ids}
+        old_tasks_stage_map = {task.id: task.stage_id.id for task in self.task_ids}
+
+        # 1. Duplicar el proyecto base sin las etapas para evitar conflictos
+        project_without_stages = self.with_context(no_create_folder=True).copy(default={'type_ids': False})
+
+        # 2. Duplicar las etapas manualmente
+        new_stages_map = {}
+        for stage in self.type_ids:
+            new_stage = stage.copy({'project_ids': [project_without_stages.id]})
+            new_stages_map[stage.id] = new_stage
+
+        # 3. Reasignar las tareas a las nuevas etapas
+        for task in project_without_stages.task_ids:
+            # El nombre de la tarea copiada puede tener el prefijo "(copia)"
+            original_task_name = task.name.replace('(copia) ', '')
+            original_task = self.task_ids.filtered(lambda t: t.name == original_task_name)
+            if not original_task:
+                 original_task = self.task_ids.filtered(lambda t: t.name == task.name)
+
+            if original_task:
+                original_stage_id = old_tasks_stage_map.get(original_task[0].id)
+                if original_stage_id and original_stage_id in new_stages_map:
+                    task.stage_id = new_stages_map[original_stage_id].id
+
+        return project_without_stages
+
     def eliminar_tareas_con_copia(self):
         """
         Método para eliminar tareas que contengan la palabra 'copia' en el nombre
