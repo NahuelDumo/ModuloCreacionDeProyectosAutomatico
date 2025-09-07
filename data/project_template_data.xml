@@ -1,16 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data noupdate="1">
-        <!-- Datos de ejemplo para plantillas de proyecto -->
-        <!-- Estos datos se pueden personalizar según las necesidades específicas -->
-        
-        <!-- Ejemplo de plantilla por defecto -->
-        <record id="project_template_default" model="project.template">
-            <field name="name">Plantilla por Defecto</field>
-            <field name="is_default" eval="True"/>
-            <field name="is_active" eval="True"/>
-            <field name="description">Plantilla utilizada cuando no hay una plantilla específica para la categoría del producto</field>
-        </record>
-        
+    <data>
+        <!-- 
+            Los datos de ejemplo fueron eliminados para evitar errores de instalación.
+            Las plantillas de proyecto deben ser creadas manualmente desde la interfaz de Odoo
+            en Proyecto > Configuración > Plantillas de Proyecto.
+        -->
     </data>
 </odoo>
