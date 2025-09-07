@@ -7,16 +7,39 @@ _logger = logging.getLogger(__name__)
 class ProjectProject(models.Model):
     _inherit = 'project.project'
 
-    def copy_project_with_stages(self, default=None):
+    @api.returns('self', lambda value: value.id)
+    def copy(self, default=None):
         """
-        Método personalizado para duplicar proyecto manteniendo la estructura de etapas
+        Sobrescribe el método copy para asegurar una duplicación exacta de las etapas
+        y tareas del proyecto, evitando la pérdida de estructura.
         """
         if default is None:
             default = {}
 
-        # Duplicar el proyecto usando el método estándar
-        new_project = super(ProjectProject, self).copy(default)
-        
+        # 1. Preparar los datos del nuevo proyecto sin etapas ni tareas
+        project_data = self.copy_data(default)[0]
+        project_data.pop('type_ids', None)
+        project_data.pop('task_ids', None)
+        new_project = self.create(project_data)
+
+        # 2. Duplicar las etapas y crear un mapa de IDs (antiguo -> nuevo)
+        stage_map = {}
+        for stage in self.type_ids:
+            new_stage = stage.copy({'project_ids': [(6, 0, [new_project.id])]})
+            stage_map[stage.id] = new_stage.id
+
+        # 3. Duplicar las tareas y asignarlas a las nuevas etapas y proyecto
+        task_map = {}
+        for task in self.task_ids:
+            task_data = task.copy_data()[0]
+            task_data.update({
+                'project_id': new_project.id,
+                'stage_id': stage_map.get(task.stage_id.id),
+                'name': task.name # Evitar el prefijo "(copia)"
+            })
+            new_task = self.env['project.task'].create(task_data)
+            task_map[task.id] = new_task.id
+
         return new_project
 
     def eliminar_tareas_con_copia(self):

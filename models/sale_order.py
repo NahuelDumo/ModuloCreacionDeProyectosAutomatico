@@ -97,8 +97,8 @@ class SaleOrder(models.Model):
             'description': f"Proyecto creado automáticamente desde presupuesto {self.name} para categoría {category.name}",
         }
         
-        # Duplicar el proyecto base usando el método personalizado
-        new_project = base_project.copy_project_with_stages(project_vals)
+        # Duplicar el proyecto base usando el método `copy()` sobrescrito
+        new_project = base_project.copy(project_vals)
         
         return new_project
 
