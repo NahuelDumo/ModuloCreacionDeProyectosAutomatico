@@ -22,16 +22,6 @@
         <field name="arch" type="xml">
             <form>
                 <sheet>
-                    <div class="oe_button_box" name="button_box">
-                        <button name="action_view_base_project" type="object" 
-                                class="oe_stat_button" icon="fa-tasks"
-                                attrs="{'invisible': [('base_project_id', '=', False)]}">
-                            <div class="o_field_widget o_stat_info">
-                                <span class="o_stat_text">Ver Proyecto</span>
-                                <span class="o_stat_text">Base</span>
-                            </div>
-                        </button>
-                    </div>
                     
                     <group>
                         <group>
