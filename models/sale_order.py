@@ -10,41 +10,11 @@ class SaleOrder(models.Model):
 
     def action_confirm(self):
         """
-        Override del método action_confirm para automatizar:
-        1. Creación de factura
-        2. Creación de proyecto basado en categoría del producto
+        Override del método action_confirm.
+        La lógica de creación de proyectos se ha movido al asistente de facturación.
         """
         result = super(SaleOrder, self).action_confirm()
-        
-        # Crear factura automáticamente
-        self._create_automatic_invoice()
-        
-        # Crear proyectos automáticamente basados en categorías de productos
-        self._create_automatic_projects()
-        
         return result
-
-    def _create_automatic_invoice(self):
-        """Crear factura automáticamente al confirmar presupuesto"""
-        try:
-            # Crear factura usando el método estándar de Odoo
-            invoice_vals = self._prepare_invoice()
-            invoice = self.env['account.move'].create(invoice_vals)
-            
-            # Crear líneas de factura
-            for line in self.order_line:
-                invoice_line_vals = line._prepare_invoice_line()
-                invoice_line_vals['move_id'] = invoice.id
-                self.env['account.move.line'].create(invoice_line_vals)
-            
-            # Calcular totales
-            invoice._compute_amount()
-            
-            _logger.info(f"Factura creada automáticamente: {invoice.name} para presupuesto {self.name}")
-            
-        except Exception as e:
-            _logger.error(f"Error al crear factura automática para {self.name}: {str(e)}")
-            raise UserError(f"Error al crear factura automática: {str(e)}")
 
     def _create_automatic_projects(self):
         """Crear proyectos automáticamente basados en categorías de productos"""
