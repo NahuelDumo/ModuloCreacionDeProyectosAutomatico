@@ -1,6 +1,8 @@
 from odoo import models, fields, api
 from odoo.exceptions import UserError
 import logging
+import datetime
+import locale
 
 _logger = logging.getLogger(__name__)
 
@@ -65,6 +67,10 @@ class SaleOrder(models.Model):
                 # Duplicar proyecto desde el proyecto base
                 new_project = self._duplicate_project_from_base(base_project, category, order_line)
                 
+                # Asignar a la etapa del mes correspondiente
+                if new_project:
+                    self._assign_project_to_monthly_stage(new_project)
+
                 # Ejecutar método "Eliminar tareas con copia"
                 if new_project:
                     new_project.eliminar_tareas_con_copia()
@@ -95,3 +101,38 @@ class SaleOrder(models.Model):
         new_project = base_project.copy(project_vals)
         
         return new_project
+
+    def _assign_project_to_monthly_stage(self, project):
+        """
+        Asigna un proyecto a la etapa correspondiente al mes actual.
+        Si la etapa no existe, la crea.
+        """
+        try:
+            # Intentar configurar el locale a español para obtener el nombre del mes
+            try:
+                locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+                month_name = datetime.date.today().strftime('%B').capitalize()
+            except locale.Error:
+                # Fallback si el locale 'es_ES' no está disponible
+                months_es = {
+                    1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
+                    5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
+                    9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
+                }
+                month_name = months_es[datetime.date.today().month]
+
+            Stage = self.env['project.project.stage']
+            # Buscar la etapa del mes actual
+            stage = Stage.search([('name', 'ilike', month_name)], limit=1)
+
+            if not stage:
+                # Si no existe, crearla
+                stage = Stage.create({'name': month_name})
+                _logger.info(f"Etapa '{month_name}' creada.")
+
+            # Asignar el proyecto a la etapa
+            project.stage_id = stage.id
+            _logger.info(f"Proyecto '{project.name}' asignado a la etapa '{month_name}'.")
+            
+        except Exception as e:
+            _logger.error(f"Error al asignar proyecto a etapa mensual: {str(e)}")
