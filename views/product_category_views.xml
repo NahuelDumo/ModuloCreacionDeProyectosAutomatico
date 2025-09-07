@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de formulario extendida para categorías de producto -->
+    <record id="view_product_category_form_inherit" model="ir.ui.view">
+        <field name="name">product.category.form.inherit</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <notebook>
+                    <page string="Configuración de Proyectos">
+                        <group>
+                            <group>
+                                <field name="auto_create_project"/>
+                                <field name="base_project_id" 
+                                       attrs="{'invisible': [('auto_create_project', '=', False)], 'required': [('auto_create_project', '=', True)]}"/>
+                            </group>
+                            <group>
+                                <field name="project_template_count"/>
+                                <button name="action_view_project_templates" 
+                                        type="object" 
+                                        class="oe_link"
+                                        attrs="{'invisible': [('project_template_count', '=', 0)]}">
+                                    <field name="project_template_count"/> Plantilla(s) de Proyecto
+                                </button>
+                            </group>
+                        </group>
+                        
+                        <field name="project_template_ids" 
+                               attrs="{'invisible': [('project_template_count', '=', 0)]}">
+                            <tree>
+                                <field name="name"/>
+                                <field name="base_project_id"/>
+                                <field name="is_active"/>
+                                <field name="is_default"/>
+                            </tree>
+                        </field>
+                    </page>
+                </notebook>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Vista de lista extendida para categorías de producto -->
+    <record id="view_product_category_tree_inherit" model="ir.ui.view">
+        <field name="name">product.category.tree.inherit</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_list_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='complete_name']" position="after">
+                <field name="auto_create_project"/>
+                <field name="project_template_count"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

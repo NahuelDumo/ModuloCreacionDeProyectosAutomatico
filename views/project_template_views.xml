@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de lista para plantillas de proyecto -->
+    <record id="view_project_template_tree" model="ir.ui.view">
+        <field name="name">project.template.tree</field>
+        <field name="model">project.template</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="product_category_id"/>
+                <field name="base_project_id"/>
+                <field name="is_active"/>
+                <field name="is_default"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista de formulario para plantillas de proyecto -->
+    <record id="view_project_template_form" model="ir.ui.view">
+        <field name="name">project.template.form</field>
+        <field name="model">project.template</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_base_project" type="object" 
+                                class="oe_stat_button" icon="fa-tasks"
+                                attrs="{'invisible': [('base_project_id', '=', False)]}">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Ver Proyecto</span>
+                                <span class="o_stat_text">Base</span>
+                            </div>
+                        </button>
+                    </div>
+                    
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="product_category_id"/>
+                            <field name="base_project_id"/>
+                        </group>
+                        <group>
+                            <field name="is_active"/>
+                            <field name="is_default"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <field name="description" placeholder="Descripción de la plantilla..."/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción para plantillas de proyecto -->
+    <record id="action_project_template" model="ir.actions.act_window">
+        <field name="name">Plantillas de Proyecto</field>
+        <field name="res_model">project.template</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crear una nueva plantilla de proyecto
+            </p>
+            <p>
+                Las plantillas de proyecto se utilizan para crear automáticamente
+                proyectos cuando se aprueban presupuestos con productos de categorías específicas.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menú para plantillas de proyecto -->
+    <menuitem id="menu_project_template"
+              name="Plantillas de Proyecto"
+              parent="project.menu_project_config"
+              action="action_project_template"
+              sequence="10"/>
+
+</odoo>
