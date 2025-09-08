@@ -87,9 +87,19 @@ class SaleOrder(models.Model):
             _logger.warning(f"No se proporcionó proyecto base para duplicar")
             return False
             
+        # Obtener el nombre del primer producto del presupuesto
+        first_product_name = ""
+        if self.order_line:
+            first_line = self.order_line[0]
+            if first_line.product_id:
+                first_product_name = first_line.product_id.name
+        
         # Preparar valores para el nuevo proyecto
+        # Formato: "Nombre de producto - N° presupuesto"
+        project_name = f"{first_product_name} - {self.name}" if first_product_name else f"{base_project.name} - {self.name}"
+        
         project_vals = {
-            'name': f"{base_project.name} - {self.name} - {category.name}",
+            'name': project_name,
             'partner_id': self.partner_id.id,
             'sale_order_id': self.id,
             'user_id': self.user_id.id,
