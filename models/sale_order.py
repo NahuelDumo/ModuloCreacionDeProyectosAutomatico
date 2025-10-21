@@ -64,17 +64,23 @@ class SaleOrder(models.Model):
                     _logger.info(f"Usando proyecto base desde plantilla: {base_project.name}")
             
             if base_project:
-                # Duplicar proyecto desde el proyecto base
-                new_project = self._duplicate_project_from_base(base_project, category, order_line)
+                # Duplicar proyecto desde el proyecto base (o obtener existente)
+                project_result = self._duplicate_project_from_base(base_project, category, order_line)
                 
-                # Asignar a la etapa del mes correspondiente
-                if new_project:
-                    self._assign_project_to_monthly_stage(new_project)
+                if project_result:
+                    project, was_created = project_result if isinstance(project_result, tuple) else (project_result, True)
+                    
+                    if was_created:
+                        # Es un proyecto nuevo, aplicar configuraciones
+                        # Asignar a la etapa del mes correspondiente
+                        self._assign_project_to_monthly_stage(project)
 
-                # Ejecutar método "Eliminar tareas con copia"
-                if new_project:
-                    new_project.eliminar_tareas_con_copia()
-                    _logger.info(f"Proyecto creado y procesado: {new_project.name}")
+                        # Ejecutar método "Eliminar tareas con copia"
+                        project.eliminar_tareas_con_copia()
+                        _logger.info(f"Proyecto creado y procesado: {project.name}")
+                    else:
+                        # El proyecto ya existía
+                        _logger.info(f"Proyecto ya existía: {project.name}. No se realizaron cambios al proyecto.")
             else:
                 _logger.warning(f"No se encontró proyecto base para la categoría {category.name}")
                 
@@ -82,7 +88,7 @@ class SaleOrder(models.Model):
             _logger.error(f"Error al crear proyecto para categoría {category.name}: {str(e)}")
 
     def _duplicate_project_from_base(self, base_project, category, order_line):
-        """Duplicar proyecto desde proyecto base"""
+        """Duplicar proyecto desde proyecto base o retornar existente"""
         if not base_project:
             _logger.warning(f"No se proporcionó proyecto base para duplicar")
             return False
@@ -98,6 +104,17 @@ class SaleOrder(models.Model):
         # Formato: "Nombre de producto - N° presupuesto"
         project_name = f"{first_product_name} - {self.name}" if first_product_name else f"{base_project.name} - {self.name}"
         
+        # Verificar si ya existe un proyecto con el mismo nombre
+        existing_project = self.env['project.project'].search([
+            ('name', '=', project_name)
+        ], limit=1)
+        
+        if existing_project:
+            _logger.info(f"Proyecto ya existe: {project_name}. No se creará un duplicado.")
+            # Mostrar mensaje en pantalla usando el bus de mensajes
+            self.env.user.notify_info(f"El proyecto '{project_name}' ya existe. No se creará un duplicado.")
+            return (existing_project, False)  # Retorna el proyecto existente y False (no fue creado)
+        
         project_vals = {
             'name': project_name,
             'partner_id': self.partner_id.id,
@@ -110,7 +127,7 @@ class SaleOrder(models.Model):
         # Duplicar el proyecto base usando el método `copy()` sobrescrito
         new_project = base_project.copy(project_vals)
         
-        return new_project
+        return (new_project, True)  # Retorna el nuevo proyecto y True (fue creado)
 
     def _assign_project_to_monthly_stage(self, project):
         """
