@@ -133,10 +133,14 @@ class SaleOrder(models.Model):
             new_project.write({'active': True})
             
         # Reorganizar y mantener las tareas en sus etapas correspondientes del proyecto base,
-        # asegurar que estén desarchivadas y corregir parent_id para que aparezcan en 'Tareas Padre'
-        if base_project.task_ids and new_project.task_ids:
-            orig_tasks = base_project.task_ids
-            new_tasks = new_project.task_ids
+        # desarchivarlas explícitamente (con active_test=False) y corregir parent_id
+        TaskEnv = self.env['project.task'].with_context(active_test=False)
+        orig_tasks = TaskEnv.search([('project_id', '=', base_project.id)])
+        new_tasks = TaskEnv.search([('project_id', '=', new_project.id)])
+        
+        if orig_tasks and new_tasks:
+            # Desarchivar todas las tareas del proyecto recién duplicado
+            new_tasks.write({'active': True})
             
             task_map = {}
             if len(orig_tasks) == len(new_tasks):
@@ -154,7 +158,7 @@ class SaleOrder(models.Model):
                             task_map[orig_task_partial[0].id] = new_task
 
             for orig_id, new_task in task_map.items():
-                orig_task = self.env['project.task'].browse(orig_id)
+                orig_task = TaskEnv.browse(orig_id)
                 clean_name = new_task.name.replace(' (copia)', '').replace('(copia)', '').replace(' (copy)', '').replace('(copy)', '').strip()
                 
                 vals_to_write = {
