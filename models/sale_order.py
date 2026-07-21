@@ -132,26 +132,49 @@ class SaleOrder(models.Model):
         if new_project and not new_project.active:
             new_project.write({'active': True})
             
-        # Reorganizar y mantener las tareas en sus etapas correspondientes del proyecto base
+        # Reorganizar y mantener las tareas en sus etapas correspondientes del proyecto base,
+        # asegurar que estén desarchivadas y corregir parent_id para que aparezcan en 'Tareas Padre'
         if base_project.task_ids and new_project.task_ids:
             orig_tasks = base_project.task_ids
             new_tasks = new_project.task_ids
             
+            task_map = {}
             if len(orig_tasks) == len(new_tasks):
                 for orig_task, new_task in zip(orig_tasks, new_tasks):
-                    clean_name = new_task.name.replace(' (copia)', '').replace('(copia)', '').replace(' (copy)', '').replace('(copy)', '').strip()
-                    vals_to_write = {'name': clean_name}
-                    if orig_task.stage_id:
-                        vals_to_write['stage_id'] = orig_task.stage_id.id
-                    new_task.write(vals_to_write)
+                    task_map[orig_task.id] = new_task
             else:
                 for new_task in new_tasks:
                     clean_name = new_task.name.replace(' (copia)', '').replace('(copia)', '').replace(' (copy)', '').replace('(copy)', '').strip()
                     orig_task = orig_tasks.filtered(lambda t: t.name == clean_name)
-                    vals_to_write = {'name': clean_name}
-                    if orig_task and orig_task[0].stage_id:
-                        vals_to_write['stage_id'] = orig_task[0].stage_id.id
-                    new_task.write(vals_to_write)
+                    if orig_task:
+                        task_map[orig_task[0].id] = new_task
+                    else:
+                        orig_task_partial = orig_tasks.filtered(lambda t: clean_name in t.name)
+                        if orig_task_partial:
+                            task_map[orig_task_partial[0].id] = new_task
+
+            for orig_id, new_task in task_map.items():
+                orig_task = self.env['project.task'].browse(orig_id)
+                clean_name = new_task.name.replace(' (copia)', '').replace('(copia)', '').replace(' (copy)', '').replace('(copy)', '').strip()
+                
+                vals_to_write = {
+                    'name': clean_name,
+                    'active': True,
+                }
+                
+                # Corregir parent_id para que las tareas principales no queden vinculadas a la plantilla base
+                if not orig_task.parent_id:
+                    vals_to_write['parent_id'] = False
+                elif orig_task.parent_id.id in task_map:
+                    vals_to_write['parent_id'] = task_map[orig_task.parent_id.id].id
+                else:
+                    vals_to_write['parent_id'] = False
+
+                # Mantener la etapa (stage_id) original de cada tarea
+                if orig_task.stage_id:
+                    vals_to_write['stage_id'] = orig_task.stage_id.id
+
+                new_task.write(vals_to_write)
         
         return (new_project, True)  # Retorna el nuevo proyecto y True (fue creado)
 
