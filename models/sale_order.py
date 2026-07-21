@@ -122,10 +122,36 @@ class SaleOrder(models.Model):
             'user_id': self.user_id.id,
             'company_id': self.company_id.id,
             'description': f"Proyecto creado automáticamente desde presupuesto {self.name} para categoría {category.name}",
+            'active': True,
         }
         
-        # Duplicar el proyecto base usando el método `copy()` sobrescrito
+        # Duplicar el proyecto base usando el método `copy()`
         new_project = base_project.copy(project_vals)
+        
+        # Asegurar que se cree desarchivado (active=True) en caso de que copy() lo inactive por defecto
+        if new_project and not new_project.active:
+            new_project.write({'active': True})
+            
+        # Reorganizar y mantener las tareas en sus etapas correspondientes del proyecto base
+        if base_project.task_ids and new_project.task_ids:
+            orig_tasks = base_project.task_ids
+            new_tasks = new_project.task_ids
+            
+            if len(orig_tasks) == len(new_tasks):
+                for orig_task, new_task in zip(orig_tasks, new_tasks):
+                    clean_name = new_task.name.replace(' (copia)', '').replace('(copia)', '').replace(' (copy)', '').replace('(copy)', '').strip()
+                    vals_to_write = {'name': clean_name}
+                    if orig_task.stage_id:
+                        vals_to_write['stage_id'] = orig_task.stage_id.id
+                    new_task.write(vals_to_write)
+            else:
+                for new_task in new_tasks:
+                    clean_name = new_task.name.replace(' (copia)', '').replace('(copia)', '').replace(' (copy)', '').replace('(copy)', '').strip()
+                    orig_task = orig_tasks.filtered(lambda t: t.name == clean_name)
+                    vals_to_write = {'name': clean_name}
+                    if orig_task and orig_task[0].stage_id:
+                        vals_to_write['stage_id'] = orig_task[0].stage_id.id
+                    new_task.write(vals_to_write)
         
         return (new_project, True)  # Retorna el nuevo proyecto y True (fue creado)
 
